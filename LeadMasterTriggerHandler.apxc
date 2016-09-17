@@ -1,0 +1,69 @@
+public with sharing class LeadMasterTriggerHandler implements TriggerInterface{
+   	private DF16_QueueableClass df16Queue = new DF16_QueueableClass();
+    private Boolean shouldRunRoutingBatch = false;
+    
+    private static LeadMasterTriggerHandler instance;
+    public static LeadMasterTriggerHandler getInstance() {
+        if (instance == null) {
+            instance = new LeadMasterTriggerHandler();
+        }
+
+        return instance;
+    }
+    
+    private LeadMasterTriggerHandler(){}
+     
+    public void beforeInsert(){
+         
+    }
+     
+    public void beforeUpdate(){ 
+        for(Lead l : (List<Lead>)Trigger.new){  
+            if(l.Interested_Product__c != (Id)Trigger.oldMap.get(l.Id).get('Interested_Product__c')){
+                this.df16Queue.leadIdSet.add(l.Id);
+            }
+            
+            if(l.Auto_Route_Lead__c = true){
+                shouldRunRoutingBatch = true;
+            }
+        }
+    }
+     
+    public void beforeDelete(){ 
+         
+    }
+     
+    public void afterInsert(){
+        for(Lead l : (List<Lead>)Trigger.new){  
+            if(l.Interested_Product__c != null){
+                this.df16Queue.leadIdSet.add(l.Id);
+            }
+            
+            if(l.Auto_Route_Lead__c = true){
+                shouldRunRoutingBatch = true;
+            }
+        }
+    }
+     
+    public void afterUpdate(){
+         
+    }
+     
+    public void afterDelete(){
+         
+    }
+     
+    public void finish(){
+        //Queueable Example
+        System.enqueueJob(this.df16Queue);
+        
+        //Batch Example
+        Integer jobCount = (Integer) [SELECT count() 
+                                      FROM CronTrigger 
+                                      WHERE CronJobDetail.Name = 'Batch Example' 
+                                      AND State = 'Waiting'];
+        if (jobCount == 0) {
+            System.scheduleBatch(new DF16_BatchClass(), 'Batch Example', 1, Limits.getLimitQueries());
+        }
+    }
+}
