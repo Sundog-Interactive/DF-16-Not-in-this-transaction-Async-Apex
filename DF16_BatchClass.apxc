@@ -1,0 +1,55 @@
+global class DF16_BatchClass implements Database.Batchable<sObject>{
+    global DF16_BatchClass() {
+    }
+
+    global Database.QueryLocator start(Database.BatchableContext BC) {
+        String query = 'SELECT Id, Auto_Route_Lead__c, Longitude, Latitude FROM Lead ';
+        query += ' WHERE Dealer_Account__c = null ';
+        query += 'AND Longitude != null ';
+        query += 'AND Latitude != null ';
+        query += 'AND Auto_Route_Lead__c = true ';
+        query += 'ORDER BY PostalCode';
+
+        return Database.getQueryLocator(query);
+    }
+
+    global void execute(Database.BatchableContext BC, List<sObject> scope) {
+        this.route((List<Lead>) scope);
+    }
+
+    global void finish(Database.BatchableContext BC) {
+    }
+
+    public void route(List<Lead> leadList) {
+        for (Lead l : leadList) {
+            l.Auto_Route_Lead__c = false;
+
+            //This is a query in a loop.  Generally not Ideal
+            //but the scope size of the batch is set using the
+            //Limits class to account for this
+            Account a = queryAccounts(Double.valueOf(l.Latitude), Double.valueOf(l.Longitude));
+            if(a.Id == null){
+                continue;
+            }
+
+            l.Dealer_Account__c = a.Id;
+        }
+
+        update leadList;
+    }
+
+    private Account queryAccounts(Double lat, Double lng) {
+        String query = 'SELECT Id ';
+        query += 'FROM ACCOUNT ';
+        query += 'WHERE DISTANCE(BillingAddress, ';
+        query += 'GEOLOCATION(' + lat + ',' + lng + '), \'mi\') < 200 ';
+        query += 'ORDER BY DISTANCE(BillingAddress , GEOLOCATION(' + lat + ',' + lng + '), \'mi\') ';
+        query += 'LIMIT 1';
+
+        for (SObject sobj : Database.query(query)) {
+            return (Account)sobj;
+        }
+
+        return new Account();
+    }
+}
