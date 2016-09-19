@@ -1,0 +1,20 @@
+public class DF16_FutureMethods {
+    @future(callout=true)
+    public static void saveProductLiterature(Id leadId){
+        for(Lead l : [Select Id, Interested_Product__c FROM Lead WHERE Id = :leadId]){
+            PageReference pagePdf = Page.ProductPage; 
+            pagePdf.getParameters().put('pId', l.Interested_Product__c);
+            
+            Attachment a = new Attachment();  
+            a.Body = pagePdf.getContentAsPDF(); 
+            a.ParentID = l.Id; 
+            a.Name = 'ProductAttachment.pdf'; 
+			insert a;
+        }
+    }
+
+    @future(limits='2xDML')
+    public static void updateContact(){
+        update [Select Id FROM Contact LIMIT 20000];
+    }
+}
