@@ -1,0 +1,5 @@
+global class DF16_ScheduleClass implements Schedulable {
+    global void execute(SchedulableContext SC) {
+ 		Database.executeBatch(new DF16_BatchClass(), Limits.getLimitQueries());       
+    }
+}
