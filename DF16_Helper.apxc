@@ -1,0 +1,6 @@
+public class DF16_Helper {
+    public static void startSchedule(String cronExpression){
+        DF16_ScheduleClass dsc = new DF16_ScheduleClass();
+        String jobID = System.schedule('DF16_Schedule Job', cronExpression, dsc);        
+    }
+}
