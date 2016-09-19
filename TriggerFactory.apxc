@@ -1,0 +1,44 @@
+public with sharing class TriggerFactory{
+    public static void createHandler(Schema.sObjectType soType){
+        if(Trigger.isExecuting){
+            //Get a handler appropriate to the object being processed
+            TriggerInterface handler = getHandler(soType);
+             
+            if (handler == null){
+                //Throw an exception here
+            }
+             
+            execute(handler);
+        }
+    }
+     
+    private static void execute(TriggerInterface handler){
+        if(Trigger.isBefore){
+            if(Trigger.isDelete){
+                handler.beforeDelete();
+            }else if(Trigger.isInsert){
+                handler.beforeInsert();
+            }else if(Trigger.isUpdate){
+                handler.beforeUpdate();
+            }
+        }else{
+            if (Trigger.isDelete){
+                handler.afterDelete();
+            }else if (Trigger.isInsert){
+                handler.afterInsert();
+            }else if (Trigger.isUpdate){
+                handler.afterUpdate();
+            }
+        }
+         
+        handler.finish();
+    }
+    
+    //gets the appropriate handler for the object type
+    private static TriggerInterface getHandler(Schema.sObjectType soType){ 
+        if (soType == Lead.sObjectType){
+            return LeadMasterTriggerHandler.getInstance(); 
+        }
+        return null;
+    }
+}
