@@ -1,0 +1,50 @@
+public class DF16_QueueableClass implements Queueable, Database.AllowsCallouts{
+    public Set<Id> leadIdSet;
+    
+    public DF16_QueueableClass(){
+        this.leadIdSet = new Set<Id>();
+    }
+    
+    public DF16_QueueableClass(Set<Id> leadIdSet){
+        this.leadIdSet = leadIdSet;
+    }
+     
+    public void execute(QueueableContext context){ 
+        List<Attachment> aList = new List<Attachment>();
+        for(Lead l : [Select Id, Interested_Product__c FROM Lead WHERE Id IN :this.leadIdSet LIMIT :Limits.getLimitCallouts()]){
+            if(Limits.getCallouts() < Limits.getLimitCallouts()){
+                PageReference pagePdf = Page.ProductPage; 
+                pagePdf.getParameters().put('pId', l.Interested_Product__c);
+
+                Blob pdfPageBlob; 
+                if(Test.isRunningTest()){
+                    pdfPageBlob = Blob.valueOf('This is the test blob');
+                }else{
+                    pdfPageBlob = pagePdf.getContentAsPDF(); 
+                }
+                
+                Attachment a = new Attachment(); 
+                a.Body = pdfPageBlob; 
+                a.ParentID = l.Id; 
+                a.Name = 'ProductAttachment.pdf'; 
+                a.Description = 'Product Attachment'; 
+                aList.add(a); 
+                
+                this.leadIdSet.remove(l.Id);
+            }
+        }
+        
+        if(!aList.isEmpty()){
+            insert aList;
+            
+            if(!this.leadIdSet.isEmpty()){
+                queueAgain(this.leadIdSet);
+            }
+        }
+    }
+    
+    @future(callout=true)
+    public static void queueAgain(Set<Id> leadIdSet){
+        System.enqueueJob(new DF16_QueueableClass(leadIdSet));
+    }   
+}
